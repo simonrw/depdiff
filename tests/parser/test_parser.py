@@ -14,7 +14,9 @@ def test_parse_update():
 
     assert len(changes) == 1
     assert changes[0] == DependencyChange(
-        name="requests", old_version="2.25.1", new_version="2.26.0"
+        name="requests",
+        old_version="2.25.1",
+        new_version="2.26.0",
     )
 
 
@@ -95,11 +97,29 @@ def test_integration():
     changes = parser.parse(contents)
 
     assert changes == [
-        DependencyChange(name="cbor", old_version="5.7.1", new_version="5.8.0"),
         DependencyChange(
-            name="certifi", old_version="2025.11.12", new_version="2026.1.4"
+            name="cbor2",
+            old_version="5.7.1",
+            new_version="5.8.0",
         ),
-        DependencyChange(name="joserfc", old_version="1.6.0", new_version="1.6.1"),
-        DependencyChange(name="jsii", old_version="1.123.0", new_version="1.125.0"),
-        DependencyChange(name="json5", old_version="0.12.1", new_version="0.13.0"),
+        DependencyChange(
+            name="certifi",
+            old_version="2025.11.12",
+            new_version="2026.1.4",
+        ),
+        DependencyChange(
+            name="joserfc",
+            old_version="1.6.0",
+            new_version="1.6.1",
+        ),
+        DependencyChange(
+            name="jsii",
+            old_version="1.123.0",
+            new_version="1.125.0",
+        ),
+        DependencyChange(
+            name="json5",
+            old_version="0.12.1",
+            new_version="0.13.0",
+        ),
     ]

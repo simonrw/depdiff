@@ -22,7 +22,7 @@ class HybridRetriever:
         Returns:
             The unified diff string.
         """
-        ...
+        raise NotImplementedError
 
     def _try_git_strategy(self, change: DependencyChange) -> Optional[str]:
         """
@@ -40,7 +40,7 @@ class HybridRetriever:
 
     def _fetch_pypi_metadata(self, package_name: str) -> dict:
         """Fetches package metadata from PyPI."""
-        ...
+        raise NotImplementedError
 
     def _extract_git_url(self, metadata: dict) -> Optional[str]:
         """Extracts a valid Git URL from PyPI metadata."""
@@ -48,7 +48,7 @@ class HybridRetriever:
 
     def _clone_repo(self, git_url: str) -> pathlib.Path:
         """Clones a git repository to a temporary location."""
-        ...
+        raise NotImplementedError
 
     def _resolve_tag(self, repo_path: pathlib.Path, version: str) -> Optional[str]:
         """Resolves a version string to a Git tag."""
@@ -56,7 +56,7 @@ class HybridRetriever:
 
     def _git_diff(self, repo_path: pathlib.Path, old_tag: str, new_tag: str) -> str:
         """Runs git diff between two tags."""
-        ...
+        raise NotImplementedError
 
     def _artifact_fallback(self, change: DependencyChange) -> str:
         """
@@ -66,8 +66,8 @@ class HybridRetriever:
         2. Extract.
         3. Compare directories using SourceComparator.
         """
-        ...
+        raise NotImplementedError
 
     def _download_artifact(self, package_name: str, version: str) -> pathlib.Path:
         """Downloads and extracts the package artifact to a temporary directory."""
-        ...
+        raise NotImplementedError

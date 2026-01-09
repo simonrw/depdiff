@@ -20,7 +20,9 @@ class SourceComparator:
             A string containing the unified diff of the directory contents.
         """
         ...
+        raise NotImplementedError
 
     def _is_binary(self, file_path: pathlib.Path) -> bool:
         """Determines if a file is binary."""
         ...
+        raise NotImplementedError

@@ -15,3 +15,4 @@ class DiffParser:
             A list of DependencyChange objects representing version bumps, additions, or removals.
         """
         ...
+        raise NotImplementedError

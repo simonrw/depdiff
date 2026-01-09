@@ -14,8 +14,8 @@ class ReportGenerator:
         Returns:
             The formatted report string.
         """
-        ...
+        raise NotImplementedError
 
     def _format_header(self, package_name: str) -> str:
         """Creates a visual separator header for a package."""
-        ...
+        raise NotImplementedError

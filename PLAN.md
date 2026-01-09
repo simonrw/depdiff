@@ -89,9 +89,9 @@ _Triggered if: No Git URL found, Git clone fails, or Tags are missing._
 
 ### Phase 1: Input Parsing
 
-- [ ] **Input Reader:** Implement reading from `stdin` or file path.
-- [ ] **Regex Parsing:** Logic to parse lines like `- package==1.0.0` and `+ package==1.0.1`.
-- [ ] **Transition Logic:** Group the `-` and `+` lines to form a complete update object.
+- [x] **Input Reader:** Implement reading from `stdin` or file path.
+- [x] **Regex Parsing:** Logic to parse lines like `- package==1.0.0` and `+ package==1.0.1`.
+- [x] **Transition Logic:** Group the `-` and `+` lines to form a complete update object.
 
 ### Phase 2a: Repository Discovery & Git Integration
 

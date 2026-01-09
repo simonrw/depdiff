@@ -12,21 +12,21 @@ The system operates as a linear pipeline with a hybrid retrieval strategy. It pr
     graph TD
         A[Input: requirements.txt Diff] -->|Parse| B(Module A: Diff Parser)
         B --> C{Module B: Retriever}
-        
+
         subgraph "Retrieval Logic"
         C -->|Strategy 1| D[Check PyPI Metadata for Git URL]
         D --> E{Git Repo Found?}
         E -->|Yes| F[Clone Repo]
         F --> G{Tags Exist?}
         G -->|Yes| H[Git Diff: old_tag vs new_tag]
-        
+
         E -->|No| I[Strategy 2: Artifact Fallback]
         G -->|No| I
         I --> J[Download .tar.gz / .whl]
         J --> K[Extract & Normalize Dirs]
         K --> L[File-by-File Diff]
         end
-        
+
         H --> M(Module C: Diff Aggregator)
         L --> M
         M --> N[Module D: Report Generator]

@@ -1,5 +1,5 @@
-from typing import List, Dict
-from depdiff.models import DependencyChange
+from typing import Dict
+
 
 class ReportGenerator:
     """Generates the final report from the aggregated diffs."""

@@ -1,6 +1,5 @@
 import pathlib
-from typing import Optional
-from depdiff.models import DependencyChange
+
 
 class SourceComparator:
     """

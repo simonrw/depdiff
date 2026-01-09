@@ -1,6 +1,7 @@
 from typing import List
 from depdiff.models import DependencyChange
 
+
 class DiffParser:
     """Parses unified diff input to identify dependency changes."""
 

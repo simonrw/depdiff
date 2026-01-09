@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
+
 @dataclass
 class DependencyChange:
     """Represents a change in a dependency version."""
+
     name: str
     old_version: Optional[str]
     new_version: Optional[str]

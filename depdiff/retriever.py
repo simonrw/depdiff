@@ -3,6 +3,7 @@ import pathlib
 from depdiff.models import DependencyChange
 from depdiff.comparator import SourceComparator
 
+
 class HybridRetriever:
     """
     Orchestrates the retrieval of source code diffs using a hybrid strategy.

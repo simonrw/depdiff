@@ -5,6 +5,7 @@ from depdiff.retriever import HybridRetriever
 from depdiff.comparator import SourceComparator
 from depdiff.reporter import ReportGenerator
 
+
 def main() -> None:
     # 1. Read input (e.g., from stdin)
     try:
@@ -48,6 +49,7 @@ def main() -> None:
 
     # 5. Output
     print(report)
+
 
 if __name__ == "__main__":
     main()

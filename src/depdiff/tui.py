@@ -16,6 +16,7 @@ class PackageItem(ListItem):
         super().__init__()
         self.change = change
         self.status = "pending"  # pending, loading, done, error
+        self.line_count: Optional[int] = None
         self._label = Label(self._get_display_text())
 
     def _get_display_text(self) -> str:
@@ -28,13 +29,16 @@ class PackageItem(ListItem):
             if self.status == "done"
             else "❌"
         )
-        return f"{status_icon} {self.change.name} ({self.change.old_version} -> {self.change.new_version})"
+        line_info = f" [{self.line_count} lines]" if self.line_count is not None else ""
+        return f"{status_icon} {self.change.name} ({self.change.old_version} -> {self.change.new_version}){line_info}"
 
     def compose(self) -> ComposeResult:
         yield self._label
 
-    def update_status(self, status: str):
+    def update_status(self, status: str, line_count: Optional[int] = None) -> None:
         self.status = status
+        if line_count is not None:
+            self.line_count = line_count
         self._label.update(self._get_display_text())
 
 
@@ -261,6 +265,9 @@ class DepDiffApp(App):
             name, diff = result
             self.diffs[name] = diff
 
+            # Calculate line count for the diff
+            line_count = len(diff.splitlines()) if diff else 0
+
             # Find the item in the list and update its status
             for item in self.query(PackageItem):
                 if item.change.name == name:
@@ -271,7 +278,7 @@ class DepDiffApp(App):
                         item.add_class("error")
                     else:
                         self.statuses[name] = "done"
-                        item.update_status("done")
+                        item.update_status("done", line_count=line_count)
                         item.add_class("done")
 
                     # If this item is currently highlighted, update the viewer

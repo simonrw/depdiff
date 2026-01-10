@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from importlib.metadata import version
 from typing import Self
+import threading
 
 from requests import Session
 
@@ -52,12 +53,19 @@ class PackageMetadata:
 
 class MetadataClient:
     def __init__(self):
-        self._session = Session()
-        self._session.headers.update(
-            {
-                "User-Agent": f"{MODULE_NAME}/{MODULE_VERSION}",
-            }
-        )
+        self._local = threading.local()
+
+    @property
+    def _session(self) -> Session:
+        """Get thread-local session."""
+        if not hasattr(self._local, "session"):
+            self._local.session = Session()
+            self._local.session.headers.update(
+                {
+                    "User-Agent": f"{MODULE_NAME}/{MODULE_VERSION}",
+                }
+            )
+        return self._local.session
 
     def get(self, package: str, version: str) -> PackageMetadata:
         r = self._session.get(f"https://pypi.org/pypi/{package}/{version}/json")

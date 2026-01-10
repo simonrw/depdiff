@@ -45,11 +45,11 @@ class TestDependencyDiffOrchestrator:
 +requests==2.26.0
 """
 
-        # Mock the retriever to return a simple diff
+        # Mock the parallel retriever to return a simple diff
         with patch.object(
-            orchestrator.retriever,
-            "get_diff",
-            return_value="mock diff content for requests",
+            orchestrator.parallel_retriever,
+            "process_changes_parallel",
+            return_value={"requests": "mock diff content for requests"},
         ):
             # Act
             result = orchestrator.process_requirements_diff(diff_input)
@@ -74,11 +74,15 @@ class TestDependencyDiffOrchestrator:
 +django==3.2.0
 """
 
-        def mock_get_diff(change):
-            return f"mock diff for {change.name}"
+        mock_diffs = {
+            "requests": "mock diff for requests",
+            "django": "mock diff for django",
+        }
 
         with patch.object(
-            orchestrator.retriever, "get_diff", side_effect=mock_get_diff
+            orchestrator.parallel_retriever,
+            "process_changes_parallel",
+            return_value=mock_diffs,
         ):
             # Act
             result = orchestrator.process_requirements_diff(diff_input)
@@ -144,13 +148,16 @@ class TestDependencyDiffOrchestrator:
 +flask==2.0.0
 """
 
-        def mock_get_diff_with_error(change):
-            if change.name == "requests":
-                raise ValueError("Mock error for requests")
-            return f"diff for {change.name}"
+        # Mock the parallel retriever to return error for requests
+        mock_diffs = {
+            "requests": "Error: Mock error for requests",
+            "flask": "diff for flask",
+        }
 
         with patch.object(
-            orchestrator.retriever, "get_diff", side_effect=mock_get_diff_with_error
+            orchestrator.parallel_retriever,
+            "process_changes_parallel",
+            return_value=mock_diffs,
         ):
             # Act
             result = orchestrator.process_requirements_diff(diff_input)
@@ -159,8 +166,9 @@ class TestDependencyDiffOrchestrator:
         # Flask should still be in the result
         assert "DIFF FOR PACKAGE: FLASK" in result
         assert "diff for flask" in result
-        # Requests should be skipped due to error
-        assert "requests" not in result.lower() or "REQUESTS" not in result
+        # Requests should have error message
+        assert "DIFF FOR PACKAGE: REQUESTS" in result
+        assert "Error: Mock error for requests" in result
 
     def test_process_from_file(
         self, orchestrator: DependencyDiffOrchestrator, tmp_path: pathlib.Path
@@ -178,9 +186,9 @@ class TestDependencyDiffOrchestrator:
         diff_file.write_text(diff_content)
 
         with patch.object(
-            orchestrator.retriever,
-            "get_diff",
-            return_value="mock diff",
+            orchestrator.parallel_retriever,
+            "process_changes_parallel",
+            return_value={"requests": "mock diff"},
         ):
             # Act
             result = orchestrator.process_from_file(diff_file)
@@ -193,7 +201,7 @@ class TestDependencyDiffOrchestrator:
     ) -> None:
         """Test that cleanup is registered to run on exit."""
         # Arrange & Act
-        with patch.object(orchestrator.retriever, "cleanup") as mock_cleanup:
+        with patch.object(orchestrator.parallel_retriever, "cleanup") as mock_cleanup:
             orchestrator.cleanup()
 
         # Assert
@@ -214,9 +222,9 @@ class TestDependencyDiffOrchestrator:
 """
 
         # Mock Git strategy to fail, forcing artifact fallback
-        with patch.object(
-            orchestrator.retriever, "_try_git_strategy", return_value=None
-        ):
+        from depdiff.retriever import HybridRetriever
+
+        with patch.object(HybridRetriever, "_try_git_strategy", return_value=None):
             # Act
             result = orchestrator.process_requirements_diff(diff_input)
 

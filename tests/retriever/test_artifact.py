@@ -11,7 +11,8 @@ from depdiff.retriever import HybridRetriever
 def retriever() -> HybridRetriever:
     """Create a HybridRetriever instance for testing."""
     comparator = SourceComparator()
-    return HybridRetriever(comparator)
+    # Disable parallel downloads for VCR compatibility
+    return HybridRetriever(comparator, parallel_downloads=False)
 
 
 class TestDownloadArtifact:

@@ -3,10 +3,9 @@ import atexit
 import pathlib
 from typing import Optional
 
-from depdiff.comparator import SourceComparator
 from depdiff.parser import DiffParser
 from depdiff.reporter import ReportGenerator
-from depdiff.retriever import HybridRetriever
+from depdiff.parallel import ParallelRetriever
 
 
 class DependencyDiffOrchestrator:
@@ -17,11 +16,16 @@ class DependencyDiffOrchestrator:
     and cleaning up temporary resources.
     """
 
-    def __init__(self):
-        """Initialize the orchestrator with necessary components."""
+    def __init__(self, max_workers: Optional[int] = None):
+        """
+        Initialize the orchestrator with necessary components.
+
+        Args:
+            max_workers: Maximum number of worker threads for parallel processing.
+                        If None, uses min(20, cpu_count * 2).
+        """
         self.parser = DiffParser()
-        self.comparator = SourceComparator()
-        self.retriever = HybridRetriever(self.comparator)
+        self.parallel_retriever = ParallelRetriever(max_workers=max_workers)
         self.reporter = ReportGenerator()
 
         # Register cleanup on exit
@@ -46,24 +50,15 @@ class DependencyDiffOrchestrator:
         if not changes:
             return "No dependency changes detected."
 
-        # Collect diffs for each change
-        diffs: dict[str, str] = {}
+        # Filter to only version updates (skip additions/removals for now)
+        updates = [c for c in changes if c.is_update]
 
-        for change in changes:
-            # Only process version updates (skip additions/removals for now)
-            if not change.is_update:
-                continue
+        if not updates:
+            return "No dependency changes detected."
 
-            try:
-                # Get the diff for this dependency change
-                diff = self.retriever.get_diff(change)
-                diffs[change.name] = diff
-
-            except Exception as e:
-                # Log error but continue processing other packages
-                error_msg = f"Error processing {change.name}: {str(e)}"
-                print(error_msg, file=sys.stderr)
-                continue
+        # Process in parallel
+        print(f"Processing {len(updates)} packages in parallel...", file=sys.stderr)
+        diffs = self.parallel_retriever.process_changes_parallel(updates)
 
         # Generate the final report
         report = self.reporter.generate_report(diffs)
@@ -99,7 +94,7 @@ class DependencyDiffOrchestrator:
 
     def _cleanup(self) -> None:
         """Clean up temporary directories created during processing."""
-        self.retriever.cleanup()
+        self.parallel_retriever.cleanup()
 
     def cleanup(self) -> None:
         """Manually trigger cleanup of temporary resources."""

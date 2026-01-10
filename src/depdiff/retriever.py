@@ -1,4 +1,4 @@
-from typing import Optional, Set
+from typing import Optional, Set, Protocol
 import pathlib
 import subprocess
 import tempfile
@@ -6,9 +6,18 @@ import tarfile
 import zipfile
 import shutil
 import requests
+from concurrent.futures import ThreadPoolExecutor
 from depdiff.models import DependencyChange
 from depdiff.comparator import SourceComparator
 from depdiff.pypi.metadata import MetadataClient, PackageMetadata
+
+
+class TempDirTracker(Protocol):
+    """Protocol for objects that track temporary directories."""
+
+    def track_temp_dir(self, path: pathlib.Path) -> None:
+        """Register a temporary directory for cleanup."""
+        ...
 
 
 class HybridRetriever:
@@ -17,9 +26,31 @@ class HybridRetriever:
     Prioritizes Git native diffs, falls back to downloading and comparing artifacts.
     """
 
-    def __init__(self, comparator: SourceComparator):
+    def __init__(
+        self,
+        comparator: SourceComparator,
+        temp_dir_tracker: Optional[TempDirTracker] = None,
+        parallel_downloads: bool = True,
+    ):
         self.comparator = comparator
-        self._temp_dirs: Set[pathlib.Path] = set()
+        self._temp_dir_tracker = temp_dir_tracker
+        self._parallel_downloads = parallel_downloads
+        # Only track locally if no external tracker
+        self._temp_dirs: Set[pathlib.Path] = (
+            set() if temp_dir_tracker is None else set()
+        )
+
+    def _track_temp_dir(self, path: pathlib.Path) -> None:
+        """
+        Register temp directory with tracker.
+
+        Args:
+            path: Path to temporary directory to track for cleanup.
+        """
+        if self._temp_dir_tracker:
+            self._temp_dir_tracker.track_temp_dir(path)
+        else:
+            self._temp_dirs.add(path)
 
     def get_diff(self, change: DependencyChange) -> str:
         """
@@ -151,7 +182,7 @@ class HybridRetriever:
         repo_path = pathlib.Path(temp_dir)
 
         # Track for cleanup
-        self._temp_dirs.add(repo_path)
+        self._track_temp_dir(repo_path)
 
         # Clone with blob filtering for performance
         # --filter=blob:none fetches commits and trees but not blobs initially
@@ -230,7 +261,7 @@ class HybridRetriever:
         """
         Fallback strategy: downloads artifacts and compares them.
 
-        1. Download .tar.gz or .whl for both versions.
+        1. Download .tar.gz or .whl for both versions (in parallel).
         2. Extract.
         3. Compare directories using SourceComparator.
 
@@ -251,9 +282,24 @@ class HybridRetriever:
         assert change.old_version is not None
         assert change.new_version is not None
 
-        # Download and extract both versions
-        old_dir = self._download_artifact(change.name, change.old_version)
-        new_dir = self._download_artifact(change.name, change.new_version)
+        # Download old and new versions
+        if self._parallel_downloads:
+            # Download concurrently for better performance
+            with ThreadPoolExecutor(max_workers=2) as download_pool:
+                old_future = download_pool.submit(
+                    self._download_artifact, change.name, change.old_version
+                )
+                new_future = download_pool.submit(
+                    self._download_artifact, change.name, change.new_version
+                )
+
+                # Wait for both downloads
+                old_dir = old_future.result()
+                new_dir = new_future.result()
+        else:
+            # Sequential downloads (for VCR compatibility)
+            old_dir = self._download_artifact(change.name, change.old_version)
+            new_dir = self._download_artifact(change.name, change.new_version)
 
         # Compare the directories
         diff = self.comparator.compare_directories(old_dir, new_dir)
@@ -302,7 +348,7 @@ class HybridRetriever:
         extract_path = pathlib.Path(temp_dir)
 
         # Track for cleanup
-        self._temp_dirs.add(extract_path)
+        self._track_temp_dir(extract_path)
 
         # Download the artifact
         response = requests.get(download_url, timeout=30)

@@ -79,7 +79,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 10 Jan 2026 00:32:40 GMT
+      - Sat, 10 Jan 2026 01:11:14 GMT
       ETag:
       - '"0uxupBQxwZskO9nCD6BPsA"'
       Permissions-Policy:
@@ -103,9 +103,9 @@ interactions:
       X-PyPI-Last-Serial:
       - '26356948'
       X-Served-By:
-      - cache-iad-kjyo7100082-IAD, cache-man4143-MAN
+      - cache-iad-kjyo7100082-IAD, cache-man4155-MAN
       X-Timer:
-      - S1768005160.304725,VS0,VE1
+      - S1768007474.098052,VS0,VE1
       X-XSS-Protection:
       - 1; mode=block
     status:
@@ -733,7 +733,7 @@ interactions:
       Access-Control-Allow-Origin:
       - '*'
       Age:
-      - '203947'
+      - '206261'
       Cache-Control:
       - max-age=365000000, immutable, public
       Connection:
@@ -743,7 +743,7 @@ interactions:
       Content-Type:
       - application/x-tar
       Date:
-      - Sat, 10 Jan 2026 00:32:40 GMT
+      - Sat, 10 Jan 2026 01:11:14 GMT
       ETag:
       - '"9f90a0eaa0ea7747fda01ca79d21ebcb"'
       Last-Modified:
@@ -763,9 +763,9 @@ interactions:
       X-Robots-Header:
       - noindex
       X-Served-By:
-      - cache-iad-kjyo7100111-IAD, cache-man4154-MAN
+      - cache-iad-kjyo7100111-IAD, cache-man4135-MAN
       X-Timer:
-      - S1768005160.340740,VS0,VE1
+      - S1768007474.133008,VS0,VE1
       X-XSS-Protection:
       - 1; mode=block
       x-amz-id-2:
@@ -869,7 +869,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Sat, 10 Jan 2026 00:32:40 GMT
+      - Sat, 10 Jan 2026 01:11:14 GMT
       ETag:
       - '"fz26+yE5ev2RautA6NlneA"'
       Permissions-Policy:
@@ -883,7 +883,7 @@ interactions:
       X-Cache:
       - HIT, HIT
       X-Cache-Hits:
-      - 82563, 2
+      - 82563, 1
       X-Content-Type-Options:
       - nosniff
       X-Frame-Options:
@@ -893,9 +893,9 @@ interactions:
       X-PyPI-Last-Serial:
       - '26356948'
       X-Served-By:
-      - cache-iad-kiad7000135-IAD, cache-man4152-MAN
+      - cache-iad-kiad7000135-IAD, cache-man4175-MAN
       X-Timer:
-      - S1768005160.383568,VS0,VE0
+      - S1768007474.176915,VS0,VE1
       X-XSS-Protection:
       - 1; mode=block
     status:
@@ -1525,7 +1525,7 @@ interactions:
       Access-Control-Allow-Origin:
       - '*'
       Age:
-      - '206168'
+      - '208483'
       Cache-Control:
       - max-age=365000000, immutable, public
       Connection:
@@ -1535,7 +1535,7 @@ interactions:
       Content-Type:
       - application/x-tar
       Date:
-      - Sat, 10 Jan 2026 00:32:40 GMT
+      - Sat, 10 Jan 2026 01:11:14 GMT
       ETag:
       - '"a7c927740e4964dd29b72cebfc1429bb"'
       Last-Modified:
@@ -1547,7 +1547,7 @@ interactions:
       X-Cache:
       - HIT, HIT
       X-Cache-Hits:
-      - 1419, 2
+      - 1419, 1
       X-Content-Type-Options:
       - nosniff
       X-Frame-Options:
@@ -1555,9 +1555,9 @@ interactions:
       X-Robots-Header:
       - noindex
       X-Served-By:
-      - cache-iad-kjyo7100063-IAD, cache-man4143-MAN
+      - cache-iad-kjyo7100063-IAD, cache-man4148-MAN
       X-Timer:
-      - S1768005160.419890,VS0,VE0
+      - S1768007474.211104,VS0,VE1
       X-XSS-Protection:
       - 1; mode=block
       x-amz-id-2:

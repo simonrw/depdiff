@@ -1,9 +1,14 @@
+from depdiff.models import DependencyChange
 import sys
 from typing import Dict
 from depdiff.parser import DiffParser
 from depdiff.retriever import HybridRetriever
 from depdiff.comparator import SourceComparator
 from depdiff.reporter import ReportGenerator
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
+
+print_lock = Lock()
 
 
 def main() -> None:
@@ -31,17 +36,31 @@ def main() -> None:
     retriever = HybridRetriever(comparator=comparator)
     diffs: Dict[str, str] = {}
 
-    for change in changes:
+    futs = []
+
+    def work(change: DependencyChange) -> tuple[str, str]:
         # We only care about updates or maybe additions/removals depending on requirements.
         # For now, let's process all.
-        print(f"Processing {change.name}...", file=sys.stderr)
+        with print_lock:
+            print(f"Processing {change.name}...", file=sys.stderr)
         try:
-            diff = retriever.get_diff(change)
-            diffs[change.name] = diff
+            return (change.name, retriever.get_diff(change))
         except Exception as e:
             # Log error but continue with other packages
-            print(f"Failed to retrieve diff for {change.name}: {e}", file=sys.stderr)
-            diffs[change.name] = f"Error retrieving diff: {e}"
+            with print_lock:
+                print(
+                    f"Failed to retrieve diff for {change.name}: {e}",
+                    file=sys.stderr,
+                )
+            return (change.name, f"Error retrieving diff: {e}")
+
+    with ThreadPoolExecutor() as pool:
+        for change in changes:
+            futs.append(pool.submit(work, change=change))
+
+        for fut in as_completed(futs):
+            name, result = fut.result()
+            diffs[name] = result
 
     # 4. Generate Report
     reporter = ReportGenerator()

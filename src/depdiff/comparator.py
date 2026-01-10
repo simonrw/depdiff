@@ -186,7 +186,9 @@ class SourceComparator:
                 lineterm="",
             )
 
-            diff_lines = list(diff)
+            # Strip newlines from each line since readlines() includes them
+            # and we'll be joining with newlines later
+            diff_lines = [line.rstrip("\n") for line in diff]
 
             # Only return if there are actual changes (more than just headers)
             if len(diff_lines) > 2:

@@ -26,11 +26,15 @@ class ReportGenerator:
             header = self._format_header(package_name)
             report_sections.append(header)
 
-            # Add the diff content
-            report_sections.append(diff_content)
+            # Add the diff content (strip trailing newlines to avoid double spacing)
+            report_sections.append(diff_content.rstrip("\n"))
 
             # Add blank line between packages
             report_sections.append("")
+
+        # Remove the trailing blank line at the end
+        if report_sections and report_sections[-1] == "":
+            report_sections.pop()
 
         return "\n".join(report_sections)
 

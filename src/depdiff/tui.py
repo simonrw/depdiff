@@ -29,8 +29,8 @@ class PackageItem(ListItem):
             if self.status == "done"
             else "❌"
         )
-        line_info = f" [{self.line_count} lines]" if self.line_count is not None else ""
-        return f"{status_icon} {self.change.name} ({self.change.old_version} -> {self.change.new_version}){line_info}"
+        line_info = f"  {self.line_count} lines" if self.line_count is not None else ""
+        return f"{status_icon} {self.change.name}\n  {self.change.old_version} -> {self.change.new_version}{line_info}"
 
     def compose(self) -> ComposeResult:
         yield self._label

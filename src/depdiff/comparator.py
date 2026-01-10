@@ -119,7 +119,7 @@ class SourceComparator:
             with open(old_file, "r", encoding="utf-8", errors="replace") as f:
                 old_content = f.readlines()
 
-            for i, line in enumerate(old_content, start=1):
+            for line in old_content:
                 lines.append(f"-{line.rstrip()}")
 
         except Exception:
@@ -148,7 +148,7 @@ class SourceComparator:
             with open(new_file, "r", encoding="utf-8", errors="replace") as f:
                 new_content = f.readlines()
 
-            for i, line in enumerate(new_content, start=1):
+            for line in new_content:
                 lines.append(f"+{line.rstrip()}")
 
         except Exception:

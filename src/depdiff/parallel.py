@@ -1,21 +1,13 @@
 import os
 import sys
 import pathlib
-import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Dict, List, Optional, Set, Protocol
+from typing import Dict, List, Optional, Set
 from depdiff.models import DependencyChange
 from depdiff.comparator import SourceComparator
 from depdiff.retriever import HybridRetriever
-
-
-class TempDirTracker(Protocol):
-    """Protocol for objects that track temporary directories."""
-
-    def track_temp_dir(self, path: pathlib.Path) -> None:
-        """Register a temporary directory for cleanup."""
-        ...
+from depdiff.types import cleanup_temp_dirs
 
 
 class ParallelRetriever:
@@ -124,16 +116,6 @@ class ParallelRetriever:
 
         This should be called when the retriever is no longer needed.
         """
-        # Shutdown thread pool
         self._executor.shutdown(wait=True)
-
-        # Clean up all temporary directories
-        for temp_dir in self._temp_dirs:
-            if temp_dir.exists():
-                try:
-                    shutil.rmtree(temp_dir)
-                except Exception:
-                    # Ignore cleanup errors
-                    pass
-
+        cleanup_temp_dirs(self._temp_dirs)
         self._temp_dirs.clear()

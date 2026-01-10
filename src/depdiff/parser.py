@@ -57,10 +57,3 @@ class DiffParser:
                 continue
 
         return list(self._dependency_changes.values())
-
-    def _split_dependency_specification(self, line: str) -> tuple[str, str]:
-        for i, c in enumerate(line):
-            if not c.isalnum():
-                return (line[:i], line[i:])
-
-        raise RuntimeError(f"Could not parse specification: {line}")

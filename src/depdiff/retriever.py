@@ -1,23 +1,15 @@
-from typing import Optional, Set, Protocol
+from typing import Optional, Set
 import pathlib
 import subprocess
 import tempfile
 import tarfile
 import zipfile
-import shutil
 import requests
 from concurrent.futures import ThreadPoolExecutor
 from depdiff.models import DependencyChange
 from depdiff.comparator import SourceComparator
 from depdiff.pypi.metadata import MetadataClient, PackageMetadata
-
-
-class TempDirTracker(Protocol):
-    """Protocol for objects that track temporary directories."""
-
-    def track_temp_dir(self, path: pathlib.Path) -> None:
-        """Register a temporary directory for cleanup."""
-        ...
+from depdiff.types import TempDirTracker, cleanup_temp_dirs
 
 
 class HybridRetriever:
@@ -35,10 +27,7 @@ class HybridRetriever:
         self.comparator = comparator
         self._temp_dir_tracker = temp_dir_tracker
         self._parallel_downloads = parallel_downloads
-        # Only track locally if no external tracker
-        self._temp_dirs: Set[pathlib.Path] = (
-            set() if temp_dir_tracker is None else set()
-        )
+        self._temp_dirs: Set[pathlib.Path] = set()
 
     def _track_temp_dir(self, path: pathlib.Path) -> None:
         """
@@ -387,12 +376,5 @@ class HybridRetriever:
 
         This should be called when the retriever is no longer needed.
         """
-        for temp_dir in self._temp_dirs:
-            if temp_dir.exists():
-                try:
-                    shutil.rmtree(temp_dir)
-                except Exception:
-                    # Ignore cleanup errors
-                    pass
-
+        cleanup_temp_dirs(self._temp_dirs)
         self._temp_dirs.clear()

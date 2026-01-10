@@ -13,7 +13,9 @@ dev = [
     "ipython>=8.18.1",
     "pre-commit>=4.3.0",
     "pytest>=8.4.2",
+    "pytest-randomly>=4.0.1",
     "pytest-recording>=0.13.4",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.14.11",
     "ty>=0.0.11",
 ]
@@ -21,3 +23,6 @@ dev = [
 [build-system]
 requires = ["uv_build>=0.9.23,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+addopts = ["-n", "auto", "--block-network"]

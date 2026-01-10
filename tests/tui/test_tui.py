@@ -1,4 +1,7 @@
+from typing import Callable
+
 import pytest
+from textual.pilot import Pilot
 
 from depdiff.models import DependencyChange
 from depdiff.tui import DepDiffApp, DiffViewer, PackageItem
@@ -40,6 +43,45 @@ index 1234567..abcdefg 100644
 """
 
 
+@pytest.fixture
+def large_diff() -> str:
+    """A larger diff for testing scrolling and large content rendering."""
+    lines = [
+        "diff --git a/large_file.py b/large_file.py",
+        "index 1234567..abcdefg 100644",
+        "--- a/large_file.py",
+        "+++ b/large_file.py",
+        "@@ -1,100 +1,100 @@",
+    ]
+    for i in range(1, 101):
+        lines.append(f"-    old_line_{i} = {i}")
+        lines.append(f"+    new_line_{i} = {i * 2}")
+    return "\n".join(lines)
+
+
+@pytest.fixture
+def app_with_diff(
+    sample_changes: list[DependencyChange], sample_diff: str
+) -> MockDepDiffApp:
+    """Create an app with pre-populated diffs."""
+    app = MockDepDiffApp(sample_changes)
+    for change in sample_changes:
+        app.diffs[change.name] = sample_diff
+        app.statuses[change.name] = "done"
+    return app
+
+
+@pytest.fixture
+def app_with_large_diff(
+    sample_changes: list[DependencyChange], large_diff: str
+) -> MockDepDiffApp:
+    """Create an app with a large diff for testing."""
+    app = MockDepDiffApp(sample_changes)
+    app.diffs["requests"] = large_diff
+    app.statuses["requests"] = "done"
+    return app
+
+
 class TestPackageItem:
     """Unit tests for PackageItem widget."""
 
@@ -75,95 +117,109 @@ class TestPackageItem:
         assert "❌" in item._get_display_text()
 
 
-class TestDepDiffAppWithLocalstackData:
-    """Integration tests using real localstack diff data."""
+class TestSnapshots:
+    """Snapshot tests for TUI visual output."""
 
-    @pytest.mark.asyncio
-    async def test_app_renders_with_real_diff(
-        self, localstack_diff: str, sample_changes: list[DependencyChange]
+    def test_initial_render(
+        self,
+        snap_compare: Callable[..., bool],
+        app_with_diff: MockDepDiffApp,
     ) -> None:
-        """Test that the app can render a real-world diff."""
-        app = MockDepDiffApp(sample_changes)
+        """Snapshot test of initial app render with pending items."""
+        assert snap_compare(app_with_diff)
 
-        async with app.run_test() as pilot:
-            # Pre-populate the diff for the first package
-            app.diffs["requests"] = localstack_diff
-            app.statuses["requests"] = "done"
+    def test_with_large_diff(
+        self,
+        snap_compare: Callable[..., bool],
+        app_with_large_diff: MockDepDiffApp,
+    ) -> None:
+        """Snapshot test with a large diff content."""
 
-            # Update the first item's status
-            for item in app.query(PackageItem):
+        def setup_viewer(pilot: Pilot[MockDepDiffApp]) -> None:
+            # Update the first item's line count
+            for item in pilot.app.query(PackageItem):
                 if item.change.name == "requests":
-                    line_count = len(localstack_diff.splitlines())
-                    item.update_status("done", line_count=line_count)
+                    item.update_status("done", line_count=205)
                     break
 
-            # Trigger a re-render of the viewer
-            await pilot.pause()
+        assert snap_compare(app_with_large_diff, run_before=setup_viewer)
 
-            # Verify the package list exists
-            package_list = app.query_one("#package-list")
-            assert package_list is not None
-
-            # Verify diff viewer exists
-            diff_viewer = app.query_one("#diff-viewer", DiffViewer)
-            assert diff_viewer is not None
-
-    @pytest.mark.asyncio
-    async def test_keyboard_navigation(
-        self, sample_changes: list[DependencyChange], sample_diff: str
+    def test_navigation_down(
+        self,
+        snap_compare: Callable[..., bool],
+        app_with_diff: MockDepDiffApp,
     ) -> None:
-        """Test j/k navigation between packages."""
-        app = MockDepDiffApp(sample_changes)
+        """Snapshot after navigating down with j."""
+        assert snap_compare(app_with_diff, press=["j"])
 
-        async with app.run_test() as pilot:
-            # Pre-populate diffs
-            for change in sample_changes:
-                app.diffs[change.name] = sample_diff
-                app.statuses[change.name] = "done"
-
-            # Navigate down with j
-            await pilot.press("j")
-            await pilot.pause()
-
-            # Navigate down again
-            await pilot.press("j")
-            await pilot.pause()
-
-            # Navigate up with k
-            await pilot.press("k")
-            await pilot.pause()
-
-    @pytest.mark.asyncio
-    async def test_scroll_commands(
-        self, localstack_diff: str, sample_changes: list[DependencyChange]
+    def test_navigation_multiple(
+        self,
+        snap_compare: Callable[..., bool],
+        app_with_diff: MockDepDiffApp,
     ) -> None:
-        """Test scroll commands (u/d for half page, space/b for full page)."""
+        """Snapshot after navigating down twice then up."""
+        assert snap_compare(app_with_diff, press=["j", "j", "k"])
+
+    def test_loading_state(
+        self,
+        snap_compare: Callable[..., bool],
+        sample_changes: list[DependencyChange],
+    ) -> None:
+        """Snapshot of loading state."""
         app = MockDepDiffApp(sample_changes)
+        app.statuses["requests"] = "loading"
 
-        async with app.run_test() as pilot:
-            # Pre-populate with a large diff
-            app.diffs["requests"] = localstack_diff
-            app.statuses["requests"] = "done"
+        def set_loading(pilot: Pilot[MockDepDiffApp]) -> None:
+            for item in pilot.app.query(PackageItem):
+                if item.change.name == "requests":
+                    item.update_status("loading")
+                    break
 
-            # Select the first item to show the diff
-            await pilot.press("enter")
-            await pilot.pause()
+        assert snap_compare(app, run_before=set_loading)
 
-            # Test half-page scroll down
-            await pilot.press("d")
-            await pilot.pause()
+    def test_error_state(
+        self,
+        snap_compare: Callable[..., bool],
+        sample_changes: list[DependencyChange],
+    ) -> None:
+        """Snapshot of error state."""
+        app = MockDepDiffApp(sample_changes)
+        app.diffs["requests"] = "Error: Failed to fetch package"
+        app.statuses["requests"] = "error"
 
-            # Test half-page scroll up
-            await pilot.press("u")
-            await pilot.pause()
+        def set_error(pilot: Pilot[MockDepDiffApp]) -> None:
+            for item in pilot.app.query(PackageItem):
+                if item.change.name == "requests":
+                    item.update_status("error")
+                    break
+            viewer = pilot.app.query_one("#diff-viewer", DiffViewer)
+            viewer.update_diff("Error: Failed to fetch package", status="error")
 
-            # Test full-page scroll down
-            await pilot.press("space")
-            await pilot.pause()
+        assert snap_compare(app, run_before=set_error)
 
-            # Test full-page scroll up
-            await pilot.press("b")
-            await pilot.pause()
+    def test_empty_diff(
+        self,
+        snap_compare: Callable[..., bool],
+        sample_changes: list[DependencyChange],
+    ) -> None:
+        """Snapshot when diff is empty."""
+        app = MockDepDiffApp(sample_changes)
+        app.diffs["requests"] = ""
+        app.statuses["requests"] = "done"
+
+        def show_empty(pilot: Pilot[MockDepDiffApp]) -> None:
+            for item in pilot.app.query(PackageItem):
+                if item.change.name == "requests":
+                    item.update_status("done", line_count=0)
+                    break
+            viewer = pilot.app.query_one("#diff-viewer", DiffViewer)
+            viewer.update_diff("")
+
+        assert snap_compare(app, run_before=show_empty)
+
+
+class TestDepDiffAppBehavior:
+    """Behavioral tests for app interactions."""
 
     @pytest.mark.asyncio
     async def test_quit_action(self, sample_changes: list[DependencyChange]) -> None:
@@ -173,54 +229,25 @@ class TestDepDiffAppWithLocalstackData:
         async with app.run_test() as pilot:
             await pilot.press("q")
             await pilot.pause()
-            # App should be exiting
             assert app._exit
 
-
-class TestDiffViewer:
-    """Unit tests for DiffViewer widget."""
-
     @pytest.mark.asyncio
-    async def test_update_diff_loading(
-        self, sample_changes: list[DependencyChange]
+    async def test_scroll_commands(
+        self, large_diff: str, sample_changes: list[DependencyChange]
     ) -> None:
-        """Test that loading state shows loading message."""
+        """Test scroll commands don't raise errors."""
         app = MockDepDiffApp(sample_changes)
 
-        async with app.run_test():
-            viewer = app.query_one("#diff-viewer", DiffViewer)
-            viewer.update_diff("", status="loading")
-            # Should show loading text (verified by not raising)
+        async with app.run_test() as pilot:
+            app.diffs["requests"] = large_diff
+            app.statuses["requests"] = "done"
 
-    @pytest.mark.asyncio
-    async def test_update_diff_error(
-        self, sample_changes: list[DependencyChange]
-    ) -> None:
-        """Test that error state shows error message."""
-        app = MockDepDiffApp(sample_changes)
+            await pilot.press("enter")
+            await pilot.pause()
 
-        async with app.run_test():
-            viewer = app.query_one("#diff-viewer", DiffViewer)
-            viewer.update_diff("Something went wrong", status="error")
-
-    @pytest.mark.asyncio
-    async def test_update_diff_empty(
-        self, sample_changes: list[DependencyChange]
-    ) -> None:
-        """Test that empty diff shows no changes message."""
-        app = MockDepDiffApp(sample_changes)
-
-        async with app.run_test():
-            viewer = app.query_one("#diff-viewer", DiffViewer)
-            viewer.update_diff("")
-
-    @pytest.mark.asyncio
-    async def test_update_diff_with_content(
-        self, sample_changes: list[DependencyChange], localstack_diff: str
-    ) -> None:
-        """Test that diff content is rendered with syntax highlighting."""
-        app = MockDepDiffApp(sample_changes)
-
-        async with app.run_test():
-            viewer = app.query_one("#diff-viewer", DiffViewer)
-            viewer.update_diff(localstack_diff)
+            # These should not raise
+            await pilot.press("d")
+            await pilot.press("u")
+            await pilot.press("space")
+            await pilot.press("b")
+            await pilot.pause()

@@ -10,14 +10,6 @@ repos:
       # Run the formatter.
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-      - id: check-json
-        files: .*\.(snapshot|validation)\.json
-
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.24.1
     hooks:

@@ -110,9 +110,9 @@ _Triggered if: No Git URL found, Git clone fails, or Tags are missing._
 
 ### Phase 3: Orchestration & Output
 
-- [ ] **Main Loop:** Iterate through parsed changes, attempt Git Diff, fallback to Artifact Diff.
-- [ ] **Output Formatter:** Specific headers to separate package streams.
-- [ ] **Cleanup:** Ensure temp directories are deleted after execution.
+- [x] **Main Loop:** Iterate through parsed changes, attempt Git Diff, fallback to Artifact Diff.
+- [x] **Output Formatter:** Specific headers to separate package streams.
+- [x] **Cleanup:** Ensure temp directories are deleted after execution.
 
 ---
 

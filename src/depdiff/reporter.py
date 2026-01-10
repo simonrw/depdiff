@@ -1,4 +1,5 @@
 from typing import Dict
+from depdiff.models import DependencyChange
 
 
 class ReportGenerator:
@@ -14,8 +15,40 @@ class ReportGenerator:
         Returns:
             The formatted report string.
         """
-        raise NotImplementedError
+        if not diffs:
+            return ""
+
+        report_sections: list[str] = []
+
+        for package_name in sorted(diffs.keys()):
+            diff_content = diffs[package_name]
+
+            # Add header for this package
+            header = self._format_header(package_name)
+            report_sections.append(header)
+
+            # Add the diff content
+            report_sections.append(diff_content)
+
+            # Add blank line between packages
+            report_sections.append("")
+
+        return "\n".join(report_sections)
 
     def _format_header(self, package_name: str) -> str:
-        """Creates a visual separator header for a package."""
-        raise NotImplementedError
+        """
+        Creates a visual separator header for a package.
+
+        Args:
+            package_name: The name of the package.
+
+        Returns:
+            A formatted header string.
+        """
+        separator = "=" * 80
+        title = f" DIFF FOR PACKAGE: {package_name.upper()} "
+        # Center the title in the separator
+        padding = (80 - len(title)) // 2
+        header_line = "=" * padding + title + "=" * (80 - padding - len(title))
+
+        return f"{separator}\n{header_line}\n{separator}"

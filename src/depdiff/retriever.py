@@ -1,9 +1,10 @@
-from typing import Optional
+from typing import Optional, Set
 import pathlib
 import subprocess
 import tempfile
 import tarfile
 import zipfile
+import shutil
 import requests
 from depdiff.models import DependencyChange
 from depdiff.comparator import SourceComparator
@@ -18,6 +19,7 @@ class HybridRetriever:
 
     def __init__(self, comparator: SourceComparator):
         self.comparator = comparator
+        self._temp_dirs: Set[pathlib.Path] = set()
 
     def get_diff(self, change: DependencyChange) -> str:
         """
@@ -147,6 +149,9 @@ class HybridRetriever:
         # Create a temporary directory for the clone
         temp_dir = tempfile.mkdtemp(prefix="depdiff_git_")
         repo_path = pathlib.Path(temp_dir)
+
+        # Track for cleanup
+        self._temp_dirs.add(repo_path)
 
         # Clone with blob filtering for performance
         # --filter=blob:none fetches commits and trees but not blobs initially
@@ -296,6 +301,9 @@ class HybridRetriever:
         temp_dir = tempfile.mkdtemp(prefix="depdiff_artifact_")
         extract_path = pathlib.Path(temp_dir)
 
+        # Track for cleanup
+        self._temp_dirs.add(extract_path)
+
         # Download the artifact
         response = requests.get(download_url, timeout=30)
         response.raise_for_status()
@@ -326,3 +334,19 @@ class HybridRetriever:
         else:
             # Return the extraction path itself (for wheels)
             return extract_path
+
+    def cleanup(self) -> None:
+        """
+        Clean up all temporary directories created during retrieval operations.
+
+        This should be called when the retriever is no longer needed.
+        """
+        for temp_dir in self._temp_dirs:
+            if temp_dir.exists():
+                try:
+                    shutil.rmtree(temp_dir)
+                except Exception:
+                    # Ignore cleanup errors
+                    pass
+
+        self._temp_dirs.clear()

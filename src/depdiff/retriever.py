@@ -40,16 +40,80 @@ class HybridRetriever:
         Returns:
             The diff string if successful, None otherwise.
         """
-        ...
+        # Can only use git strategy for version updates (not additions/removals)
+        if not change.is_update:
+            return None
+
+        # These assertions are safe because is_update guarantees both are not None
+        assert change.old_version is not None
+        assert change.new_version is not None
+
+        try:
+            # Fetch metadata for the new version to get the Git URL
+            metadata = self._fetch_pypi_metadata(change.name, change.new_version)
+
+            # Extract Git URL from metadata
+            git_url = self._extract_git_url(metadata)
+            if not git_url:
+                return None
+
+            # Clone the repository
+            repo_path = self._clone_repo(git_url)
+
+            # Resolve tags for both versions
+            old_tag = self._resolve_tag(repo_path, change.old_version)
+            if not old_tag:
+                return None
+
+            new_tag = self._resolve_tag(repo_path, change.new_version)
+            if not new_tag:
+                return None
+
+            # Generate and return the diff
+            diff = self._git_diff(repo_path, old_tag, new_tag)
+            return diff
+
+        except Exception:
+            # Any error means we fall back to artifact strategy
+            return None
 
     def _fetch_pypi_metadata(self, package_name: str, version: str) -> PackageMetadata:
         """Fetches package metadata from PyPI."""
         client = MetadataClient()
         return client.get(package_name, version)
 
-    def _extract_git_url(self, metadata: dict) -> Optional[str]:
-        """Extracts a valid Git URL from PyPI metadata."""
-        ...
+    def _extract_git_url(self, metadata: PackageMetadata) -> Optional[str]:
+        """
+        Extracts a valid Git URL from PyPI metadata.
+
+        Checks for common Git hosting platforms (GitHub, GitLab, Bitbucket).
+
+        Args:
+            metadata: The package metadata from PyPI.
+
+        Returns:
+            A valid Git URL if found, None otherwise.
+        """
+        url = metadata.info.url
+
+        if not url:
+            return None
+
+        # Check if the URL is from a known Git hosting platform
+        git_platforms = [
+            "https://github.com/",
+            "https://gitlab.com/",
+            "https://bitbucket.org/",
+        ]
+
+        for platform in git_platforms:
+            if url.startswith(platform):
+                # Ensure it ends with .git for consistency
+                if not url.endswith(".git"):
+                    url = url.rstrip("/") + ".git"
+                return url
+
+        return None
 
     def _clone_repo(self, git_url: str) -> pathlib.Path:
         """

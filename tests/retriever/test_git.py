@@ -2,10 +2,13 @@ import pathlib
 import subprocess
 import tempfile
 from typing import Generator
+from unittest.mock import patch
 
 import pytest
 
 from depdiff.comparator import SourceComparator
+from depdiff.models import DependencyChange
+from depdiff.pypi.metadata import Info, PackageMetadata
 from depdiff.retriever import HybridRetriever
 
 
@@ -263,3 +266,223 @@ class TestGitDiff:
         # Assert
         assert "setup.py" in result
         assert "+from setuptools import setup" in result
+
+
+class TestExtractGitUrl:
+    """Tests for the _extract_git_url method."""
+
+    def test_github_url(self, retriever: HybridRetriever) -> None:
+        """Test extracting GitHub URL."""
+        # Arrange
+        metadata = PackageMetadata(
+            info=Info(url="https://github.com/user/repo"),
+            urls=[],
+        )
+
+        # Act
+        result = retriever._extract_git_url(metadata)
+
+        # Assert
+        assert result == "https://github.com/user/repo.git"
+
+    def test_github_url_already_with_git(self, retriever: HybridRetriever) -> None:
+        """Test extracting GitHub URL that already ends with .git."""
+        # Arrange
+        metadata = PackageMetadata(
+            info=Info(url="https://github.com/user/repo.git"),
+            urls=[],
+        )
+
+        # Act
+        result = retriever._extract_git_url(metadata)
+
+        # Assert
+        assert result == "https://github.com/user/repo.git"
+
+    def test_gitlab_url(self, retriever: HybridRetriever) -> None:
+        """Test extracting GitLab URL."""
+        # Arrange
+        metadata = PackageMetadata(
+            info=Info(url="https://gitlab.com/user/project"),
+            urls=[],
+        )
+
+        # Act
+        result = retriever._extract_git_url(metadata)
+
+        # Assert
+        assert result == "https://gitlab.com/user/project.git"
+
+    def test_bitbucket_url(self, retriever: HybridRetriever) -> None:
+        """Test extracting Bitbucket URL."""
+        # Arrange
+        metadata = PackageMetadata(
+            info=Info(url="https://bitbucket.org/user/repo"),
+            urls=[],
+        )
+
+        # Act
+        result = retriever._extract_git_url(metadata)
+
+        # Assert
+        assert result == "https://bitbucket.org/user/repo.git"
+
+    def test_non_git_url(self, retriever: HybridRetriever) -> None:
+        """Test that non-Git URLs return None."""
+        # Arrange
+        metadata = PackageMetadata(
+            info=Info(url="https://example.com/project"),
+            urls=[],
+        )
+
+        # Act
+        result = retriever._extract_git_url(metadata)
+
+        # Assert
+        assert result is None
+
+    def test_empty_url(self, retriever: HybridRetriever) -> None:
+        """Test that empty URL returns None."""
+        # Arrange
+        metadata = PackageMetadata(
+            info=Info(url=""),
+            urls=[],
+        )
+
+        # Act
+        result = retriever._extract_git_url(metadata)
+
+        # Assert
+        assert result is None
+
+
+class TestTryGitStrategy:
+    """Tests for the _try_git_strategy method."""
+
+    def test_successful_git_strategy(
+        self, retriever: HybridRetriever, cloneable_git_repo: str
+    ) -> None:
+        """Test successful Git strategy workflow."""
+        # Arrange
+        change = DependencyChange(
+            name="test-package",
+            old_version="1.0.0",
+            new_version="2.0.0",
+        )
+
+        # Mock the metadata fetch to return our local git repo
+        mock_metadata = PackageMetadata(
+            info=Info(url=cloneable_git_repo.replace("file://", "https://github.com/")),
+            urls=[],
+        )
+
+        with patch.object(retriever, "_fetch_pypi_metadata", return_value=mock_metadata):
+            with patch.object(retriever, "_clone_repo", return_value=pathlib.Path(cloneable_git_repo.replace("file://", ""))):
+                # Act
+                result = retriever._try_git_strategy(change)
+
+        # Assert
+        assert result is not None
+        assert "requirements.txt" in result
+        assert "-requests==2.25.1" in result
+        assert "+requests==2.26.0" in result
+
+    def test_git_strategy_with_addition(self, retriever: HybridRetriever) -> None:
+        """Test that Git strategy returns None for package additions."""
+        # Arrange
+        change = DependencyChange(
+            name="test-package",
+            old_version=None,
+            new_version="1.0.0",
+        )
+
+        # Act
+        result = retriever._try_git_strategy(change)
+
+        # Assert
+        assert result is None
+
+    def test_git_strategy_with_removal(self, retriever: HybridRetriever) -> None:
+        """Test that Git strategy returns None for package removals."""
+        # Arrange
+        change = DependencyChange(
+            name="test-package",
+            old_version="1.0.0",
+            new_version=None,
+        )
+
+        # Act
+        result = retriever._try_git_strategy(change)
+
+        # Assert
+        assert result is None
+
+    def test_git_strategy_no_git_url(self, retriever: HybridRetriever) -> None:
+        """Test that Git strategy returns None when no Git URL is found."""
+        # Arrange
+        change = DependencyChange(
+            name="test-package",
+            old_version="1.0.0",
+            new_version="2.0.0",
+        )
+
+        # Mock metadata with non-Git URL
+        mock_metadata = PackageMetadata(
+            info=Info(url="https://example.com/project"),
+            urls=[],
+        )
+
+        with patch.object(retriever, "_fetch_pypi_metadata", return_value=mock_metadata):
+            # Act
+            result = retriever._try_git_strategy(change)
+
+        # Assert
+        assert result is None
+
+    def test_git_strategy_missing_old_tag(
+        self, retriever: HybridRetriever, cloneable_git_repo: str
+    ) -> None:
+        """Test that Git strategy returns None when old tag is missing."""
+        # Arrange
+        change = DependencyChange(
+            name="test-package",
+            old_version="0.5.0",  # This tag doesn't exist
+            new_version="2.0.0",
+        )
+
+        mock_metadata = PackageMetadata(
+            info=Info(url=cloneable_git_repo.replace("file://", "https://github.com/")),
+            urls=[],
+        )
+
+        with patch.object(retriever, "_fetch_pypi_metadata", return_value=mock_metadata):
+            with patch.object(retriever, "_clone_repo", return_value=pathlib.Path(cloneable_git_repo.replace("file://", ""))):
+                # Act
+                result = retriever._try_git_strategy(change)
+
+        # Assert
+        assert result is None
+
+    def test_git_strategy_missing_new_tag(
+        self, retriever: HybridRetriever, cloneable_git_repo: str
+    ) -> None:
+        """Test that Git strategy returns None when new tag is missing."""
+        # Arrange
+        change = DependencyChange(
+            name="test-package",
+            old_version="1.0.0",
+            new_version="99.0.0",  # This tag doesn't exist
+        )
+
+        mock_metadata = PackageMetadata(
+            info=Info(url=cloneable_git_repo.replace("file://", "https://github.com/")),
+            urls=[],
+        )
+
+        with patch.object(retriever, "_fetch_pypi_metadata", return_value=mock_metadata):
+            with patch.object(retriever, "_clone_repo", return_value=pathlib.Path(cloneable_git_repo.replace("file://", ""))):
+                # Act
+                result = retriever._try_git_strategy(change)
+
+        # Assert
+        assert result is None

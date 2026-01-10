@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal
+from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Header, Footer, ListView, ListItem, Static, Label
 from textual.worker import Worker, WorkerState
 from textual.binding import Binding
@@ -38,26 +38,34 @@ class PackageItem(ListItem):
         self._label.update(self._get_display_text())
 
 
-class DiffViewer(Static):
+class DiffViewer(VerticalScroll):
     can_focus = True
 
-    def update_diff(self, diff: str, status: str = "done"):
+    def compose(self) -> ComposeResult:
+        yield Static(id="diff-content")
+
+    def update_diff(self, diff: str, status: str = "done") -> None:
+        content = self.query_one("#diff-content", Static)
         if status == "loading":
-            self.update(Text("Loading diff...", style="bold yellow"))
+            content.update(Text("Loading diff...", style="bold yellow"))
             return
         elif status == "error":
-            self.update(Text(diff, style="bold red"))
+            content.update(Text(diff, style="bold red"))
             return
 
         if not diff or diff.strip() == "":
-            self.update(Text("No changes detected in source code.", style="dim italic"))
+            content.update(
+                Text("No changes detected in source code.", style="dim italic")
+            )
             return
 
         try:
             syntax = Syntax(diff, "diff", theme="monokai", line_numbers=True)
-            self.update(syntax)
+            content.update(syntax)
         except Exception as e:
-            self.update(Text(f"Error rendering diff: {e}", style="bold red"))
+            content.update(Text(f"Error rendering diff: {e}", style="bold red"))
+
+        self.scroll_home(animate=False)
 
 
 class DepDiffApp(App):
@@ -84,13 +92,15 @@ class DepDiffApp(App):
 
     #diff-viewer {
         width: 1fr;
-        padding: 1;
-        overflow-y: scroll;
         background: $background;
     }
 
     #diff-viewer:focus {
         border: tall $accent;
+    }
+
+    #diff-content {
+        padding: 1;
     }
 
     ListItem {
@@ -129,8 +139,10 @@ class DepDiffApp(App):
         Binding("r", "refresh", "Refresh", show=True),
         Binding("up,k", "cursor_up", "Up", show=False),
         Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("u", "scroll_up", "Scroll Up", show=True),
-        Binding("d", "scroll_down", "Scroll Down", show=True),
+        Binding("u", "scroll_half_up", "Half Up", show=True),
+        Binding("d", "scroll_half_down", "Half Down", show=True),
+        Binding("space", "scroll_page_down", "Page Down", show=True),
+        Binding("b", "scroll_page_up", "Page Up", show=True),
     ]
 
     def __init__(
@@ -162,17 +174,23 @@ class DepDiffApp(App):
     def action_cursor_down(self) -> None:
         self.query_one("#package-list", ListView).action_cursor_down()
 
-    def action_scroll_up(self) -> None:
-        viewer = self.query_one("#diff-viewer")
-        if viewer.virtual_size.height > viewer.size.height:
-            step = viewer.size.height // 2
-            viewer.scroll_y -= step
+    def action_scroll_half_up(self) -> None:
+        viewer = self.query_one("#diff-viewer", DiffViewer)
+        step = viewer.size.height // 2
+        viewer.scroll_relative(y=-step, animate=False)
 
-    def action_scroll_down(self) -> None:
-        viewer = self.query_one("#diff-viewer")
-        if viewer.virtual_size.height > viewer.size.height:
-            step = viewer.size.height // 2
-            viewer.scroll_y += step
+    def action_scroll_half_down(self) -> None:
+        viewer = self.query_one("#diff-viewer", DiffViewer)
+        step = viewer.size.height // 2
+        viewer.scroll_relative(y=step, animate=False)
+
+    def action_scroll_page_up(self) -> None:
+        viewer = self.query_one("#diff-viewer", DiffViewer)
+        viewer.scroll_relative(y=-viewer.size.height, animate=False)
+
+    def action_scroll_page_down(self) -> None:
+        viewer = self.query_one("#diff-viewer", DiffViewer)
+        viewer.scroll_relative(y=viewer.size.height, animate=False)
 
     def action_refresh(self) -> None:
         """Refresh all package diffs."""
@@ -237,7 +255,10 @@ class DepDiffApp(App):
 
     def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
         if event.state == WorkerState.SUCCESS:
-            name, diff = event.worker.result
+            result = event.worker.result
+            if result is None:
+                return
+            name, diff = result
             self.diffs[name] = diff
 
             # Find the item in the list and update its status
@@ -278,7 +299,7 @@ class DepDiffApp(App):
                         self._update_viewer(item)
                     break
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         self.retriever.cleanup()
         self.exit()
 

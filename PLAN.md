@@ -103,10 +103,10 @@ _Triggered if: No Git URL found, Git clone fails, or Tags are missing._
 
 ### Phase 2b: Artifact Fallback (The Safety Net)
 
-- [ ] **Fallback Trigger:** Try/Except block around Phase 2a to catch missing tags/repos.
-- [ ] **Downloader:** Logic to download sdist/wheels to temp folders.
-- [ ] **Extractor:** `zipfile` and `tarfile` handling.
-- [ ] **Dir Diff:** Implementation of a recursive directory comparison to generate unified diff text.
+- [x] **Fallback Trigger:** Try/Except block around Phase 2a to catch missing tags/repos.
+- [x] **Downloader:** Logic to download sdist/wheels to temp folders.
+- [x] **Extractor:** `zipfile` and `tarfile` handling.
+- [x] **Dir Diff:** Implementation of a recursive directory comparison to generate unified diff text.
 
 ### Phase 3: Orchestration & Output
 

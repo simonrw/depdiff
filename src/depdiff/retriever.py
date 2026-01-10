@@ -2,6 +2,9 @@ from typing import Optional
 import pathlib
 import subprocess
 import tempfile
+import tarfile
+import zipfile
+import requests
 from depdiff.models import DependencyChange
 from depdiff.comparator import SourceComparator
 from depdiff.pypi.metadata import MetadataClient, PackageMetadata
@@ -20,13 +23,24 @@ class HybridRetriever:
         """
         Obtains the unified diff for a dependency change.
 
+        Uses hybrid strategy: tries Git first, falls back to artifact comparison.
+
         Args:
             change: The dependency change object.
 
         Returns:
             The unified diff string.
+
+        Raises:
+            Exception: If both Git and artifact strategies fail.
         """
-        raise NotImplementedError
+        # Try Git strategy first
+        git_diff = self._try_git_strategy(change)
+        if git_diff is not None:
+            return git_diff
+
+        # Fall back to artifact comparison
+        return self._artifact_fallback(change)
 
     def _try_git_strategy(self, change: DependencyChange) -> Optional[str]:
         """
@@ -214,9 +228,101 @@ class HybridRetriever:
         1. Download .tar.gz or .whl for both versions.
         2. Extract.
         3. Compare directories using SourceComparator.
+
+        Args:
+            change: The dependency change object.
+
+        Returns:
+            The unified diff string.
+
+        Raises:
+            Exception: If download or comparison fails.
         """
-        raise NotImplementedError
+        # Can only compare updates (not additions/removals)
+        if not change.is_update:
+            raise ValueError("Artifact fallback only supports version updates")
+
+        # These assertions are safe because is_update guarantees both are not None
+        assert change.old_version is not None
+        assert change.new_version is not None
+
+        # Download and extract both versions
+        old_dir = self._download_artifact(change.name, change.old_version)
+        new_dir = self._download_artifact(change.name, change.new_version)
+
+        # Compare the directories
+        diff = self.comparator.compare_directories(old_dir, new_dir)
+
+        return diff
 
     def _download_artifact(self, package_name: str, version: str) -> pathlib.Path:
-        """Downloads and extracts the package artifact to a temporary directory."""
-        raise NotImplementedError
+        """
+        Downloads and extracts the package artifact to a temporary directory.
+
+        Prefers sdist (.tar.gz) over wheels (.whl).
+
+        Args:
+            package_name: Name of the package.
+            version: Version string.
+
+        Returns:
+            Path to the extracted package directory.
+
+        Raises:
+            ValueError: If no suitable artifact is found.
+            Exception: If download or extraction fails.
+        """
+        # Fetch metadata to get download URLs
+        metadata = self._fetch_pypi_metadata(package_name, version)
+
+        # Find sdist (.tar.gz) or wheel (.whl) URL
+        sdist_url: Optional[str] = None
+        wheel_url: Optional[str] = None
+
+        for url in metadata.urls:
+            if url.endswith(".tar.gz"):
+                sdist_url = url
+                break
+            elif url.endswith(".whl") and wheel_url is None:
+                wheel_url = url
+
+        # Prefer sdist over wheel
+        download_url = sdist_url or wheel_url
+
+        if not download_url:
+            raise ValueError(f"No suitable artifact found for {package_name} {version}")
+
+        # Create temporary directory for extraction
+        temp_dir = tempfile.mkdtemp(prefix="depdiff_artifact_")
+        extract_path = pathlib.Path(temp_dir)
+
+        # Download the artifact
+        response = requests.get(download_url, timeout=30)
+        response.raise_for_status()
+
+        # Save to temporary file
+        artifact_file = extract_path / "artifact"
+        artifact_file.write_bytes(response.content)
+
+        # Extract based on file type
+        if download_url.endswith(".tar.gz"):
+            with tarfile.open(artifact_file, "r:gz") as tar:
+                tar.extractall(path=extract_path, filter="fully_trusted")
+        elif download_url.endswith(".whl"):
+            with zipfile.ZipFile(artifact_file, "r") as zip_ref:
+                zip_ref.extractall(extract_path)
+
+        # Remove the downloaded artifact file
+        artifact_file.unlink()
+
+        # Find the extracted package directory
+        # For sdist, it's typically <package>-<version>/
+        # For wheel, files are extracted directly
+        extracted_dirs = [d for d in extract_path.iterdir() if d.is_dir()]
+
+        if len(extracted_dirs) == 1:
+            # Return the single extracted directory
+            return extracted_dirs[0]
+        else:
+            # Return the extraction path itself (for wheels)
+            return extract_path

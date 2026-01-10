@@ -131,11 +131,15 @@ class TestCloneRepo:
         assert (result / ".git").exists()
         assert (result / "requirements.txt").exists()
 
-    @pytest.mark.skip(reason="GitHub asks for the user password instead of directly failing")
+    @pytest.mark.skip(
+        reason="GitHub asks for the user password instead of directly failing"
+    )
     def test_clone_failure(self, retriever: HybridRetriever) -> None:
         """Test git clone failure with an invalid URL."""
         # Arrange
-        invalid_url = "https://github.com/nonexistent/repo-that-does-not-exist-12345.git"
+        invalid_url = (
+            "https://github.com/nonexistent/repo-that-does-not-exist-12345.git"
+        )
 
         # Act & Assert
         with pytest.raises(subprocess.CalledProcessError):
@@ -376,8 +380,14 @@ class TestTryGitStrategy:
             urls=[],
         )
 
-        with patch.object(retriever, "_fetch_pypi_metadata", return_value=mock_metadata):
-            with patch.object(retriever, "_clone_repo", return_value=pathlib.Path(cloneable_git_repo.replace("file://", ""))):
+        with patch.object(
+            retriever, "_fetch_pypi_metadata", return_value=mock_metadata
+        ):
+            with patch.object(
+                retriever,
+                "_clone_repo",
+                return_value=pathlib.Path(cloneable_git_repo.replace("file://", "")),
+            ):
                 # Act
                 result = retriever._try_git_strategy(change)
 
@@ -432,7 +442,9 @@ class TestTryGitStrategy:
             urls=[],
         )
 
-        with patch.object(retriever, "_fetch_pypi_metadata", return_value=mock_metadata):
+        with patch.object(
+            retriever, "_fetch_pypi_metadata", return_value=mock_metadata
+        ):
             # Act
             result = retriever._try_git_strategy(change)
 
@@ -455,8 +467,14 @@ class TestTryGitStrategy:
             urls=[],
         )
 
-        with patch.object(retriever, "_fetch_pypi_metadata", return_value=mock_metadata):
-            with patch.object(retriever, "_clone_repo", return_value=pathlib.Path(cloneable_git_repo.replace("file://", ""))):
+        with patch.object(
+            retriever, "_fetch_pypi_metadata", return_value=mock_metadata
+        ):
+            with patch.object(
+                retriever,
+                "_clone_repo",
+                return_value=pathlib.Path(cloneable_git_repo.replace("file://", "")),
+            ):
                 # Act
                 result = retriever._try_git_strategy(change)
 
@@ -479,8 +497,14 @@ class TestTryGitStrategy:
             urls=[],
         )
 
-        with patch.object(retriever, "_fetch_pypi_metadata", return_value=mock_metadata):
-            with patch.object(retriever, "_clone_repo", return_value=pathlib.Path(cloneable_git_repo.replace("file://", ""))):
+        with patch.object(
+            retriever, "_fetch_pypi_metadata", return_value=mock_metadata
+        ):
+            with patch.object(
+                retriever,
+                "_clone_repo",
+                return_value=pathlib.Path(cloneable_git_repo.replace("file://", "")),
+            ):
                 # Act
                 result = retriever._try_git_strategy(change)
 

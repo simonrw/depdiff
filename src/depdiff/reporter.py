@@ -1,5 +1,4 @@
 from typing import Dict
-from depdiff.models import DependencyChange
 
 
 class ReportGenerator:

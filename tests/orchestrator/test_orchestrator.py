@@ -1,5 +1,4 @@
 import pathlib
-import tempfile
 from unittest.mock import patch
 
 import pytest
@@ -215,7 +214,9 @@ class TestDependencyDiffOrchestrator:
 """
 
         # Mock Git strategy to fail, forcing artifact fallback
-        with patch.object(orchestrator.retriever, "_try_git_strategy", return_value=None):
+        with patch.object(
+            orchestrator.retriever, "_try_git_strategy", return_value=None
+        ):
             # Act
             result = orchestrator.process_requirements_diff(diff_input)
 

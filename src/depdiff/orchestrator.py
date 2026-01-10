@@ -4,7 +4,6 @@ import pathlib
 from typing import Optional
 
 from depdiff.comparator import SourceComparator
-from depdiff.models import DependencyChange
 from depdiff.parser import DiffParser
 from depdiff.reporter import ReportGenerator
 from depdiff.retriever import HybridRetriever

@@ -113,7 +113,7 @@ class SourceComparator:
         """
         lines: list[str] = []
         lines.append(f"--- a/{rel_path}")
-        lines.append(f"+++ /dev/null")
+        lines.append("+++ /dev/null")
 
         try:
             with open(old_file, "r", encoding="utf-8", errors="replace") as f:
@@ -141,7 +141,7 @@ class SourceComparator:
             List of diff lines.
         """
         lines: list[str] = []
-        lines.append(f"--- /dev/null")
+        lines.append("--- /dev/null")
         lines.append(f"+++ b/{rel_path}")
 
         try:

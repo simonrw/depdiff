@@ -98,9 +98,7 @@ class TestReportGenerator:
         for line in header.split("\n"):
             assert len(line) == 80
 
-    def test_packages_separated_by_blank_line(
-        self, reporter: ReportGenerator
-    ) -> None:
+    def test_packages_separated_by_blank_line(self, reporter: ReportGenerator) -> None:
         """Test that packages are separated by blank lines."""
         # Arrange
         diffs = {

@@ -24,7 +24,9 @@ def temp_dirs() -> Generator[tuple[pathlib.Path, pathlib.Path], None, None]:
 class TestIsBinary:
     """Tests for the _is_binary method."""
 
-    def test_text_file(self, comparator: SourceComparator, tmp_path: pathlib.Path) -> None:
+    def test_text_file(
+        self, comparator: SourceComparator, tmp_path: pathlib.Path
+    ) -> None:
         """Test that text files are identified as non-binary."""
         # Arrange
         text_file = tmp_path / "test.txt"
@@ -36,7 +38,9 @@ class TestIsBinary:
         # Assert
         assert result is False
 
-    def test_binary_file(self, comparator: SourceComparator, tmp_path: pathlib.Path) -> None:
+    def test_binary_file(
+        self, comparator: SourceComparator, tmp_path: pathlib.Path
+    ) -> None:
         """Test that binary files are identified correctly."""
         # Arrange
         binary_file = tmp_path / "test.bin"
@@ -48,7 +52,9 @@ class TestIsBinary:
         # Assert
         assert result is True
 
-    def test_python_file(self, comparator: SourceComparator, tmp_path: pathlib.Path) -> None:
+    def test_python_file(
+        self, comparator: SourceComparator, tmp_path: pathlib.Path
+    ) -> None:
         """Test that Python files are identified as non-binary."""
         # Arrange
         py_file = tmp_path / "test.py"
@@ -146,7 +152,9 @@ class TestCompareDirectories:
         result = comparator.compare_directories(old_dir, new_dir)
 
         # Assert
-        assert "src/main.py" in result or "src\\main.py" in result  # Handle Windows paths
+        assert (
+            "src/main.py" in result or "src\\main.py" in result
+        )  # Handle Windows paths
         assert "-print('v1')" in result
         assert "+print('v2')" in result
 

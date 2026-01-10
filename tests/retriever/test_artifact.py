@@ -1,11 +1,9 @@
-import pathlib
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from depdiff.comparator import SourceComparator
 from depdiff.models import DependencyChange
-from depdiff.pypi.metadata import Info, PackageMetadata
 from depdiff.retriever import HybridRetriever
 
 
@@ -90,9 +88,7 @@ class TestArtifactFallback:
 class TestGetDiff:
     """Tests for the get_diff method (hybrid strategy)."""
 
-    def test_get_diff_uses_git_when_available(
-        self, retriever: HybridRetriever
-    ) -> None:
+    def test_get_diff_uses_git_when_available(self, retriever: HybridRetriever) -> None:
         """Test that get_diff uses Git strategy when successful."""
         # Arrange
         change = DependencyChange(
@@ -112,9 +108,7 @@ class TestGetDiff:
         assert result == expected_diff
         mock_fallback.assert_not_called()
 
-    def test_get_diff_falls_back_to_artifact(
-        self, retriever: HybridRetriever
-    ) -> None:
+    def test_get_diff_falls_back_to_artifact(self, retriever: HybridRetriever) -> None:
         """Test that get_diff falls back to artifact when Git fails."""
         # Arrange
         change = DependencyChange(
@@ -126,7 +120,9 @@ class TestGetDiff:
         expected_diff = "artifact diff output"
 
         with patch.object(retriever, "_try_git_strategy", return_value=None):
-            with patch.object(retriever, "_artifact_fallback", return_value=expected_diff):
+            with patch.object(
+                retriever, "_artifact_fallback", return_value=expected_diff
+            ):
                 # Act
                 result = retriever.get_diff(change)
 

@@ -95,11 +95,11 @@ _Triggered if: No Git URL found, Git clone fails, or Tags are missing._
 
 ### Phase 2a: Repository Discovery & Git Integration
 
-- [ ] **Metadata Client:** Function to fetch JSON from `pypi.org/pypi/<name>/json`.
-- [ ] **URL Extractor:** Parse `project_urls` to find valid GitHub/GitLab/Bitbucket URLs.
-- [ ] **Git Cloner:** Implement `subprocess` calls to `git clone` (consider `--bare` or `--filter=blob:none` for speed).
-- [ ] **Tag Matcher:** Implement the logic: `check tag "ver" -> if fail -> check tag "v{ver}"`.
-- [ ] **Git Diff Wrapper:** Run `git diff` between resolved tags and capture stdout.
+- [x] **Metadata Client:** Function to fetch JSON from `pypi.org/pypi/<name>/json`.
+- [x] **URL Extractor:** Parse `project_urls` to find valid GitHub/GitLab/Bitbucket URLs.
+- [x] **Git Cloner:** Implement `subprocess` calls to `git clone` (consider `--bare` or `--filter=blob:none` for speed).
+- [x] **Tag Matcher:** Implement the logic: `check tag "ver" -> if fail -> check tag "v{ver}"`.
+- [x] **Git Diff Wrapper:** Run `git diff` between resolved tags and capture stdout.
 
 ### Phase 2b: Artifact Fallback (The Safety Net)
 
